@@ -8,9 +8,10 @@ import (
 )
 
 type XmlNode struct {
-	Name     string
-	Children []XmlNode
-	Contents string
+	Name       string
+	Children   []XmlNode
+	Contents   string
+	Attributes map[string]string
 }
 
 type Parser struct {
@@ -29,12 +30,12 @@ func NewParser(input []tokeniser.Token) Parser {
 
 func (p *Parser) Parse() (XmlNode, error) {
 	root := XmlNode{}
+	root.Attributes = make(map[string]string)
 
-	name, err := p.readName()
+	err := p.readOpeningTag(&root)
 	if err != nil {
 		return root, fmt.Errorf("error at '%d'. %v", p.curr, err)
 	}
-	root.Name = name
 
 	for p.curr < p.l {
 		switch p.Peek().T {
@@ -58,9 +59,9 @@ func (p *Parser) Parse() (XmlNode, error) {
 			return root, nil
 		default:
 			return root, fmt.Errorf("dunno what to do with '%v'", p.Peek())
-		}		
+		}
 	}
-	
+
 	return root, nil
 }
 
@@ -77,27 +78,60 @@ func (p *Parser) Peek() tokeniser.Token {
 	return p.Input[p.curr]
 }
 
-func (p *Parser) readName() (string, error) {
+func (p *Parser) readOpeningTag(root *XmlNode) error {
 	_, err := p.readNext(tokeniser.LB)
 	if err != nil {
-		return "", fmt.Errorf("failed to read name tag. %v", err)
+		return fmt.Errorf("failed to read name tag. %v", err)
 	}
 
 	nameToken, err := p.readNext(tokeniser.Keyword)
 	if err != nil {
-		return "", err
-	}
-	name, ok := nameToken.Val.(string)
-	if !ok {
-		return "", fmt.Errorf("could not convert token to string %v", nameToken)
+		return err
 	}
 
-	_, err = p.readNext(tokeniser.RB)
+	root.Name = nameToken.Val
+
+	for {
+		switch p.Peek().T {
+		case tokeniser.RB:
+			_, err = p.readNext(tokeniser.RB)
+			if err != nil {
+				return err
+			}
+			return nil
+		case tokeniser.Whitespace:
+			_, err = p.readNext(tokeniser.Whitespace)
+			if err != nil {
+				return err
+			}
+		case tokeniser.Keyword:
+			key, val, err := p.readAttr()
+			if err != nil {
+				return fmt.Errorf("error reading attr. %s", err)
+			}
+			root.Attributes[key] = val
+		default:
+			return fmt.Errorf("did not expect '%v' while reading opening tag", p.Peek())
+		}
+	}
+
+	// return nil
+}
+
+func (p *Parser) readAttr() (string, string, error) {
+	key, err := p.readNext(tokeniser.Keyword)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-
-	return name, nil
+	_, err = p.readNext(tokeniser.EQ)
+	if err != nil {
+		return "", "", err
+	}
+	val, err := p.readNext(tokeniser.String)
+	if err != nil {
+		return "", "", err
+	}
+	return key.Val, val.Val, nil
 }
 
 func (p *Parser) readContents() (string, error) {
@@ -109,23 +143,15 @@ func (p *Parser) readContents() (string, error) {
 			t, err := p.readNext(tokeniser.Keyword)
 			if err != nil {
 				return "", err
-			}
-			s, ok := t.Val.(string)
-			if !ok {
-				return "", err
-			}
-			sb.WriteString(s)
+			}			
+			sb.WriteString(t.Val)
 
 		case tokeniser.Whitespace:
 			t, err := p.readNext(tokeniser.Whitespace)
 			if err != nil {
 				return "", err
 			}
-			s, ok := t.Val.(string)
-			if !ok {
-				return "", fmt.Errorf("could not convert token to string '%v'", t)
-			}
-			sb.WriteString(s)
+			sb.WriteString(t.Val)
 
 		default:
 			return sb.String(), nil
@@ -138,22 +164,19 @@ func (p *Parser) readContents() (string, error) {
 func (p *Parser) chompClosingTag(rootName string) error {
 	_, err := p.readNext(tokeniser.CloB)
 	if err != nil {
-		return  fmt.Errorf("error while chomping at position %d. %v", p.curr, err)
+		return fmt.Errorf("error while chomping at position %d. %v", p.curr, err)
 	}
 	nameToken, err := p.readNext(tokeniser.Keyword)
 	if err != nil {
-		return  fmt.Errorf("error while chomping. %v", err)
+		return fmt.Errorf("error while chomping. %v", err)
 	}
-	name, ok := nameToken.Val.(string)
-	if !ok {
-		return  fmt.Errorf("could not convert token to string '%v'", nameToken)
-	}
+	name := nameToken.Val
 	if name != rootName {
-		return  fmt.Errorf("'%v' did not match '%v'", name, rootName)
+		return fmt.Errorf("'%v' did not match '%v'", name, rootName)
 	}
 	_, err = p.readNext(tokeniser.RB)
 	if err != nil {
-		return  fmt.Errorf("error while chomping. %v", err)
+		return fmt.Errorf("error while chomping. %v", err)
 	}
 	return nil
 }

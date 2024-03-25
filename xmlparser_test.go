@@ -5,6 +5,7 @@ import (
 
 	"github.com/danwhitford/xmlparser/tokeniser"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestParseXml(t *testing.T) {
@@ -124,6 +125,25 @@ func TestParseXml(t *testing.T) {
 				},
 			},
 		},
+		{
+			[]tokeniser.Token{ // <foo version="1.0">
+				{T: tokeniser.LB, Val: "<"},
+				{T: tokeniser.Keyword, Val: "foo"},
+				{T: tokeniser.Whitespace, Val: " "},
+				{T: tokeniser.Keyword, Val: "version"},
+				{T: tokeniser.EQ, Val: "="},
+				{T: tokeniser.String, Val: "1.0"},
+				{T: tokeniser.RB, Val: ">"},
+			},
+			XmlNode{
+				Name:     "foo",
+				Contents: "",
+				Children: nil,
+				Attributes: map[string]string{
+					"version": "1.0",
+				},
+			},
+		},
 	}
 
 	for _, tst := range table {
@@ -132,7 +152,7 @@ func TestParseXml(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed on input '%v'. %v.", tst.input, err)
 		}
-		if diff := cmp.Diff(tst.want, got); diff != "" {
+		if diff := cmp.Diff(tst.want, got, cmpopts.EquateEmpty()); diff != "" {
 			t.Fatalf("failed on input '%v' with diff '%v'", tst.input, diff)
 		}
 	}

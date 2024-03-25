@@ -20,7 +20,7 @@ const (
 
 type Token struct {
 	T   TokenType
-	Val any
+	Val string
 }
 
 type Tokeniser struct {
