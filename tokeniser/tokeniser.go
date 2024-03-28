@@ -1,6 +1,7 @@
 package tokeniser
 
 import (
+	"fmt"
 	"strings"
 	"unicode"
 )
@@ -16,6 +17,8 @@ const (
 	String
 	CloB
 	Whitespace
+	ProcLB
+	ProcRB
 )
 
 type Token struct {
@@ -41,16 +44,25 @@ func (t *Tokeniser) Tokenise() ([]Token, error) {
 	var tokens []Token
 	for t.curr < t.l {
 		switch t.Input[t.curr] {
-		case ' ':
+		case ' ', '\n', '\t':
 			token, err := t.getWhitespace()
 			if err != nil {
 				return tokens, err
 			}
 			tokens = append(tokens, token)
 		case '<':
-			if t.curr+1 < t.l && t.Input[t.curr+1] == '/' {
-				tokens = append(tokens, Token{CloB, "</"})
-				t.curr += 2
+			if t.curr+1 < t.l {
+				switch t.Input[t.curr+1] {
+				case '/':
+					tokens = append(tokens, Token{CloB, "</"})
+					t.curr += 2
+				case '?':
+					tokens = append(tokens, Token{ProcLB, "<?"})
+					t.curr += 2
+				default:
+					tokens = append(tokens, Token{LB, "<"})
+					t.curr++
+				}
 			} else {
 				tokens = append(tokens, Token{LB, "<"})
 				t.curr++
@@ -61,6 +73,13 @@ func (t *Tokeniser) Tokenise() ([]Token, error) {
 		case '=':
 			tokens = append(tokens, Token{EQ, "="})
 			t.curr++
+		case '?':
+			if t.curr+1 < t.l && t.Input[t.curr+1] == '>' {
+				tokens = append(tokens, Token{ProcRB, "?>"})
+				t.curr += 2
+			} else {
+				return tokens, fmt.Errorf("unexpected '?' without closing")
+			}
 		case '"':
 			token, err := t.getString()
 			if err != nil {

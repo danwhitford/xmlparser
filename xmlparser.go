@@ -7,34 +7,62 @@ import (
 	"github.com/danwhitford/xmlparser/tokeniser"
 )
 
-type XmlNode struct {
-	Name       string
-	Children   []XmlNode
-	Contents   string
-	Attributes map[string]string
-}
-
-type Parser struct {
+type parser struct {
 	Input []tokeniser.Token
 	curr  int
 	l     int
 }
 
-func NewParser(input []tokeniser.Token) Parser {
-	return Parser{
+func Parse(input string) (XmlNode, error) {
+	t := tokeniser.NewTokeniser(input)
+	tokens, err := t.Tokenise()
+	if err != nil {
+		return XmlNode{}, fmt.Errorf("error tokenising. %s", err)
+	}
+	p := newParser(tokens)
+	out, err := p.runParser()
+	if err != nil {
+		return XmlNode{}, fmt.Errorf("error running parser. %s", err)
+	}
+	return out, nil
+}
+
+func newParser(input []tokeniser.Token) parser {
+	return parser{
 		input,
 		0,
 		len(input),
 	}
 }
 
-func (p *Parser) Parse() (XmlNode, error) {
+func (p *parser) runParser() (XmlNode, error) {
 	root := XmlNode{}
 	root.Attributes = make(map[string]string)
+	root.Instructions = make(map[string]map[string]string)
 
-	err := p.readOpeningTag(&root)
-	if err != nil {
-		return root, fmt.Errorf("error at '%d'. %v", p.curr, err)
+	if p.Peek().T == tokeniser.ProcLB {
+		err := p.readProcessingInstruction(&root)
+		if err != nil {
+			return root, fmt.Errorf("error reading a processing instruction. %s", err)
+		}
+	}
+
+	for p.curr < p.l {
+		if p.Peek().T == tokeniser.Whitespace {
+			_, err := p.readNext(tokeniser.Whitespace)
+			if err != nil {
+				return root, fmt.Errorf("error skipping through whitespace. %v", err)
+			}
+		} else {
+			break
+		}
+	}
+
+	if p.curr < p.l {
+		err := p.readOpeningTag(&root)
+		if err != nil {
+			return root, fmt.Errorf("error reading opening tag. %v. %#v", err, p.Input[:p.curr+1])
+		}
 	}
 
 	for p.curr < p.l {
@@ -46,17 +74,22 @@ func (p *Parser) Parse() (XmlNode, error) {
 			}
 			root.Contents = contents
 		case tokeniser.LB:
-			child, err := p.Parse()
+			child, err := p.runParser()
 			if err != nil {
 				return root, err
 			}
 			root.Children = append(root.Children, child)
 		case tokeniser.CloB:
-			err = p.chompClosingTag(root.Name)
+			err := p.chompClosingTag(root.Name)
 			if err != nil {
 				return root, err
 			}
 			return root, nil
+		case tokeniser.Whitespace:
+			_, err := p.readNext(tokeniser.Whitespace)
+			if err != nil {
+				return root, err
+			}
 		default:
 			return root, fmt.Errorf("dunno what to do with '%v'", p.Peek())
 		}
@@ -65,7 +98,10 @@ func (p *Parser) Parse() (XmlNode, error) {
 	return root, nil
 }
 
-func (p *Parser) readNext(expected tokeniser.TokenType) (tokeniser.Token, error) {
+func (p *parser) readNext(expected tokeniser.TokenType) (tokeniser.Token, error) {
+	if p.curr >= p.l {
+		return tokeniser.Token{}, fmt.Errorf("at end of input but expecting '%v'", expected)
+	}
 	t := p.Input[p.curr]
 	if t.T != expected {
 		return t, fmt.Errorf("token incorrect type. want '%v' got '%v'", expected, t.T)
@@ -74,11 +110,11 @@ func (p *Parser) readNext(expected tokeniser.TokenType) (tokeniser.Token, error)
 	return t, nil
 }
 
-func (p *Parser) Peek() tokeniser.Token {
+func (p *parser) Peek() tokeniser.Token {
 	return p.Input[p.curr]
 }
 
-func (p *Parser) readOpeningTag(root *XmlNode) error {
+func (p *parser) readOpeningTag(root *XmlNode) error {
 	_, err := p.readNext(tokeniser.LB)
 	if err != nil {
 		return fmt.Errorf("failed to read name tag. %v", err)
@@ -114,11 +150,47 @@ func (p *Parser) readOpeningTag(root *XmlNode) error {
 			return fmt.Errorf("did not expect '%v' while reading opening tag", p.Peek())
 		}
 	}
-
-	// return nil
 }
 
-func (p *Parser) readAttr() (string, string, error) {
+func (p *parser) readProcessingInstruction(root *XmlNode) error {
+	_, err := p.readNext(tokeniser.ProcLB)
+	if err != nil {
+		return fmt.Errorf("failed to read name tag. %v", err)
+	}
+
+	nameToken, err := p.readNext(tokeniser.Keyword)
+	if err != nil {
+		return err
+	}
+
+	root.Instructions[nameToken.Val] = make(map[string]string)
+
+	for {
+		switch p.Peek().T {
+		case tokeniser.ProcRB:
+			_, err = p.readNext(tokeniser.ProcRB)
+			if err != nil {
+				return err
+			}
+			return nil
+		case tokeniser.Whitespace:
+			_, err = p.readNext(tokeniser.Whitespace)
+			if err != nil {
+				return err
+			}
+		case tokeniser.Keyword:
+			key, val, err := p.readAttr()
+			if err != nil {
+				return fmt.Errorf("error reading attr. %s", err)
+			}
+			root.Instructions[nameToken.Val][key] = val
+		default:
+			return fmt.Errorf("did not expect '%v' while reading processing instruction", p.Peek())
+		}
+	}
+}
+
+func (p *parser) readAttr() (string, string, error) {
 	key, err := p.readNext(tokeniser.Keyword)
 	if err != nil {
 		return "", "", err
@@ -134,7 +206,7 @@ func (p *Parser) readAttr() (string, string, error) {
 	return key.Val, val.Val, nil
 }
 
-func (p *Parser) readContents() (string, error) {
+func (p *parser) readContents() (string, error) {
 	var sb strings.Builder
 
 	for p.curr < p.l {
@@ -143,7 +215,7 @@ func (p *Parser) readContents() (string, error) {
 			t, err := p.readNext(tokeniser.Keyword)
 			if err != nil {
 				return "", err
-			}			
+			}
 			sb.WriteString(t.Val)
 
 		case tokeniser.Whitespace:
@@ -161,7 +233,7 @@ func (p *Parser) readContents() (string, error) {
 	return sb.String(), nil
 }
 
-func (p *Parser) chompClosingTag(rootName string) error {
+func (p *parser) chompClosingTag(rootName string) error {
 	_, err := p.readNext(tokeniser.CloB)
 	if err != nil {
 		return fmt.Errorf("error while chomping at position %d. %v", p.curr, err)

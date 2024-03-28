@@ -60,6 +60,24 @@ func TestTokenise(t *testing.T) {
 				{T: RB, Val: ">"},
 			},
 		},
+		{
+			`<?xml version="1.0" encoding="UTF-8"?>`,
+			[]Token{
+				{T: ProcLB, Val: "<?"},
+				{T: Keyword, Val: "xml"},
+				{T: Whitespace, Val: " "},
+
+				{T: Keyword, Val: "version"},
+				{T: EQ, Val: "="},
+				{T: String, Val: "1.0"},
+				{T: Whitespace, Val: " "},
+
+				{T: Keyword, Val: "encoding"},
+				{T: EQ, Val: "="},
+				{T: String, Val: "UTF-8"},
+				{T: ProcRB, Val: "?>"},
+			},
+		},
 	}
 
 	for _, tst := range table {

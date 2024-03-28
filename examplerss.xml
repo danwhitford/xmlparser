@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Example Podcast</title>
+    <link>http://www.examplepodcast.com</link>
+    <language>en-gb</language>
+    <itunes:author>Podcast Author</itunes:author>
+    <description>This is an example of a podcast RSS feed.</description>
+    <image>
+        <url>http://www.examplepodcast.com/podcast-image.jpg</url>
+        <title>Example Podcast</title>
+        <link>http://www.examplepodcast.com</link>
+    </image>
+
+    <item>
+      <title>Episode 1: Introduction</title>
+      <itunes:author>Podcast Author</itunes:author>
+      <pubDate>Wed, 27 Mar 2024 12:00:00 GMT</pubDate>
+      <itunes:duration>15:32</itunes:duration>
+      <guid>http://www.examplepodcast.com/episodes/1</guid>
+      <description>This is the first episode of the Example Podcast.</description>
+      <enclosure url="http://www.examplepodcast.com/episodes/1.mp3" length="7500000" type="audio/mpeg"/>
+    </item>
+
+    <item>
+      <title>Episode 2: Stuff</title>
+      <itunes:author>Podcast Author</itunes:author>
+      <pubDate>Fri, 29 Mar 2024 12:00:00 GMT</pubDate>
+      <itunes:duration>15:32</itunes:duration>
+      <guid>http://www.examplepodcast.com/episodes/2</guid>
+      <description>This is the second episode of the Example Podcast.</description>
+      <enclosure url="http://www.examplepodcast.com/episodes/2.mp3" length="7500000" type="audio/mpeg"/>
+    </item>
+  </channel>
+</rss>
