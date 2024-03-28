@@ -23,8 +23,8 @@ func TestPrintXml(t *testing.T) {
 			XmlNode{
 				Name:     "foo",
 				Contents: "bar",
-				Attributes: map[string]string{
-					"version": "1.0",
+				Attributes: []Attribute{
+					{"version", "1.0"},
 				},
 			},
 			"<foo version=\"1.0\">bar</foo>\n",
@@ -60,6 +60,17 @@ func TestPrintXml(t *testing.T) {
 				"\t\t<granditem>bar</granditem>\n" +
 				"\t</item>\n" +
 				"</parent>\n",
+		},
+		{
+			XmlNode{
+				Name:     "foo",
+				Contents: "bar",
+				Attributes: []Attribute{
+					{"version", "1.0"},
+					{"type", "test"},
+				},
+			},
+			"<foo version=\"1.0\" type=\"test\">bar</foo>\n",
 		},
 	}
 

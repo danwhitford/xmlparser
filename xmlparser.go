@@ -37,8 +37,6 @@ func newParser(input []tokeniser.Token) parser {
 
 func (p *parser) runParser() (XmlNode, error) {
 	root := XmlNode{}
-	root.Attributes = make(map[string]string)
-	root.Instructions = make(map[string]map[string]string)
 
 	if p.Peek().T == tokeniser.ProcLB {
 		err := p.readProcessingInstruction(&root)
@@ -61,7 +59,14 @@ func (p *parser) runParser() (XmlNode, error) {
 	if p.curr < p.l {
 		err := p.readOpeningTag(&root)
 		if err != nil {
-			return root, fmt.Errorf("error reading opening tag. %v. %#v", err, p.Input[:p.curr+1])
+			return root, fmt.Errorf("error reading opening tag. %v. %#v", err, p.Input[p.curr])
+		}
+		if p.curr < p.l && p.Peek().T == tokeniser.SelfRB {
+			_, err := p.readNext(tokeniser.SelfRB)
+			if err != nil {
+				return root, fmt.Errorf("error with self closing tag. %v", err)
+			}
+			return root, nil
 		}
 	}
 
@@ -127,13 +132,15 @@ func (p *parser) readOpeningTag(root *XmlNode) error {
 
 	root.Name = nameToken.Val
 
-	for {
+	for p.curr < p.l {
 		switch p.Peek().T {
 		case tokeniser.RB:
 			_, err = p.readNext(tokeniser.RB)
 			if err != nil {
 				return err
 			}
+			return nil
+		case tokeniser.SelfRB:
 			return nil
 		case tokeniser.Whitespace:
 			_, err = p.readNext(tokeniser.Whitespace)
@@ -145,11 +152,13 @@ func (p *parser) readOpeningTag(root *XmlNode) error {
 			if err != nil {
 				return fmt.Errorf("error reading attr. %s", err)
 			}
-			root.Attributes[key] = val
+			root.Attributes = append(root.Attributes, Attribute{key, val})
 		default:
 			return fmt.Errorf("did not expect '%v' while reading opening tag", p.Peek())
 		}
 	}
+
+	return nil
 }
 
 func (p *parser) readProcessingInstruction(root *XmlNode) error {
@@ -163,7 +172,7 @@ func (p *parser) readProcessingInstruction(root *XmlNode) error {
 		return err
 	}
 
-	root.Instructions[nameToken.Val] = make(map[string]string)
+	var attrs []Attribute
 
 	for {
 		switch p.Peek().T {
@@ -172,6 +181,10 @@ func (p *parser) readProcessingInstruction(root *XmlNode) error {
 			if err != nil {
 				return err
 			}
+			root.Instructions = append(root.Instructions, Instruction{
+				nameToken.Val,
+				attrs,
+			})
 			return nil
 		case tokeniser.Whitespace:
 			_, err = p.readNext(tokeniser.Whitespace)
@@ -183,7 +196,7 @@ func (p *parser) readProcessingInstruction(root *XmlNode) error {
 			if err != nil {
 				return fmt.Errorf("error reading attr. %s", err)
 			}
-			root.Instructions[nameToken.Val][key] = val
+			attrs = append(attrs, Attribute{key, val})
 		default:
 			return fmt.Errorf("did not expect '%v' while reading processing instruction", p.Peek())
 		}

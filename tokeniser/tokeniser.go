@@ -19,6 +19,7 @@ const (
 	Whitespace
 	ProcLB
 	ProcRB
+	SelfRB
 )
 
 type Token struct {
@@ -79,6 +80,13 @@ func (t *Tokeniser) Tokenise() ([]Token, error) {
 				t.curr += 2
 			} else {
 				return tokens, fmt.Errorf("unexpected '?' without closing")
+			}
+		case '/':
+			if t.curr+1 < t.l && t.Input[t.curr+1] == '>' {
+				tokens = append(tokens, Token{SelfRB, "/>"})
+				t.curr += 2
+			} else {
+				return tokens, fmt.Errorf("unexpected '/' without closing")
 			}
 		case '"':
 			token, err := t.getString()

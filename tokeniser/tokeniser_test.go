@@ -78,6 +78,27 @@ func TestTokenise(t *testing.T) {
 				{T: ProcRB, Val: "?>"},
 			},
 		},
+		{
+			`<enclosure length="7500000" type="audio/mpeg"/>`,
+			[]Token{ // <enclosure length="7500000" type="audio/mpeg"/>
+				{T: LB, Val: "<"},
+
+				{T: Keyword, Val: "enclosure"},
+				{T: Whitespace, Val: " "},
+
+				{T: Keyword, Val: "length"},
+				{T: EQ, Val: "="},
+				{T: String, Val: "7500000"},
+
+				{T: Whitespace, Val: " "},
+
+				{T: Keyword, Val: "type"},
+				{T: EQ, Val: "="},
+				{T: String, Val: "audio/mpeg"},
+
+				{T: SelfRB, Val: "/>"},
+			},
+		},
 	}
 
 	for _, tst := range table {

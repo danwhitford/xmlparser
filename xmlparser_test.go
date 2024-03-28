@@ -136,12 +136,10 @@ func TestParseXml(t *testing.T) {
 				{T: tokeniser.RB, Val: ">"},
 			},
 			XmlNode{
-				Name:     "foo",
-				Contents: "",
-				Children: nil,
-				Attributes: map[string]string{
-					"version": "1.0",
-				},
+				Name:       "foo",
+				Contents:   "",
+				Children:   nil,
+				Attributes: []Attribute{{"version", "1.0"}},
 			},
 		},
 		{
@@ -161,9 +159,9 @@ func TestParseXml(t *testing.T) {
 				Name:     "foo",
 				Contents: "",
 				Children: nil,
-				Attributes: map[string]string{
-					"version": "1.0",
-					"type":    "nonsense",
+				Attributes: []Attribute{
+					{"version", "1.0"},
+					{"type", "nonsense"},
 				},
 			},
 		},
@@ -184,10 +182,13 @@ func TestParseXml(t *testing.T) {
 				{T: tokeniser.ProcRB, Val: "?>"},
 			},
 			XmlNode{
-				Instructions: map[string]map[string]string{
-					"xml": {
-						"encoding": "UTF-8",
-						"version": "1.0",
+				Instructions: []Instruction{
+					{
+						"xml",
+						[]Attribute{
+							{"version", "1.0"},
+							{"encoding", "UTF-8"},
+						},
 					},
 				},
 			},
@@ -209,7 +210,7 @@ func TestParseXml(t *testing.T) {
 				{T: tokeniser.ProcRB, Val: "?>"},
 
 				{T: tokeniser.Whitespace, Val: "\n"},
-				
+
 				{T: tokeniser.LB, Val: "<"},
 				{T: tokeniser.Keyword, Val: "foo"},
 				{T: tokeniser.RB, Val: ">"},
@@ -221,18 +222,23 @@ func TestParseXml(t *testing.T) {
 				{T: tokeniser.RB, Val: ">"},
 			},
 			XmlNode{
-				Instructions: map[string]map[string]string{
-					"xml": {
-						"encoding": "UTF-8",
-						"version": "1.0",
+				Instructions: []Instruction{
+					{
+						"xml",
+						[]Attribute{
+							{"version", "1.0"},
+							{"encoding", "UTF-8"},
+						},
 					},
 				},
-				Name: "foo",
+				Name:     "foo",
 				Contents: "bar",
 			},
 		},
 		{
-			[]tokeniser.Token { // <enclosure length="7500000" type="audio/mpeg"/>
+			[]tokeniser.Token{ // <enclosure length="7500000" type="audio/mpeg"/>
+				{T: tokeniser.LB, Val: "<"},
+
 				{T: tokeniser.Keyword, Val: "enclosure"},
 				{T: tokeniser.Whitespace, Val: " "},
 
@@ -246,13 +252,13 @@ func TestParseXml(t *testing.T) {
 				{T: tokeniser.EQ, Val: "="},
 				{T: tokeniser.String, Val: "audio/mpeg"},
 
-				{T: tokeniser.CloB, Val: "/>"},
+				{T: tokeniser.SelfRB, Val: "/>"},
 			},
 			XmlNode{
 				Name: "enclosure",
-				Attributes: map[string]string{
-					"length": "7500000",
-					"type": "audio/mpeg",
+				Attributes: []Attribute{
+					{"length", "7500000"},
+					{"type", "audio/mpeg"},
 				},
 			},
 		},

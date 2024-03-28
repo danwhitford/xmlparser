@@ -21,7 +21,7 @@ func TestExamplePodFeed(t *testing.T) {
 	var sb strings.Builder
 	root.PrettyPrint(&sb)
 	got := sb.String()
-	
+
 	if diff := cmp.Diff(exampleRss, got); diff != "" {
 		t.Fatalf("wanted indentical parse/deparse but got diff %s", diff)
 	}
