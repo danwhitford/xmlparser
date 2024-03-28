@@ -245,8 +245,17 @@ func TestParseXml(t *testing.T) {
 				{T: tokeniser.Keyword, Val: "type"},
 				{T: tokeniser.EQ, Val: "="},
 				{T: tokeniser.String, Val: "audio/mpeg"},
-			}
-		}
+
+				{T: tokeniser.CloB, Val: "/>"},
+			},
+			XmlNode{
+				Name: "enclosure",
+				Attributes: map[string]string{
+					"length": "7500000",
+					"type": "audio/mpeg",
+				},
+			},
+		},
 	}
 
 	for _, tst := range table {
