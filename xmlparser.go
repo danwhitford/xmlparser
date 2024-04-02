@@ -96,7 +96,8 @@ func (p *parser) runParser() (XmlNode, error) {
 				return root, err
 			}
 		default:
-			return root, fmt.Errorf("dunno what to do with '%v'", p.Peek())
+			// fmt.Println(p.Input[p.curr-10 : p.curr+10])
+			return root, fmt.Errorf("dunno what to do with '%v' at '%d'", p.Peek(), p.curr)
 		}
 	}
 
@@ -233,6 +234,13 @@ func (p *parser) readContents() (string, error) {
 
 		case tokeniser.Whitespace:
 			t, err := p.readNext(tokeniser.Whitespace)
+			if err != nil {
+				return "", err
+			}
+			sb.WriteString(t.Val)
+
+		case tokeniser.EQ:
+			t, err := p.readNext(tokeniser.EQ)
 			if err != nil {
 				return "", err
 			}

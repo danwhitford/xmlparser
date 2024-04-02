@@ -1,6 +1,7 @@
 package xmlparser
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/danwhitford/xmlparser/tokeniser"
@@ -262,16 +263,37 @@ func TestParseXml(t *testing.T) {
 				},
 			},
 		},
+		{
+			[]tokeniser.Token{
+				{T: tokeniser.LB, Val: "<"},
+				{T: tokeniser.Keyword, Val: "url"},
+				{T: tokeniser.RB, Val: ">"},
+
+				{T: tokeniser.Keyword, Val: "https://megaphone.imgix.net/podcasts/00c0a118-2426-11ee-b258-73d331d0123b/image/show-cover.jpg?ixlib"},
+				{T: tokeniser.EQ, Val: "="},
+				{T: tokeniser.Keyword, Val: "rails-4.3.1"},
+
+				{T: tokeniser.CloB, Val: "</"},
+				{T: tokeniser.Keyword, Val: "url"},
+				{T: tokeniser.RB, Val: ">"},
+			},
+			XmlNode{
+				Name:     "url",
+				Contents: "https://megaphone.imgix.net/podcasts/00c0a118-2426-11ee-b258-73d331d0123b/image/show-cover.jpg?ixlib=rails-4.3.1",
+			},
+		},
 	}
 
-	for _, tst := range table {
-		ter := newParser(tst.input)
-		got, err := ter.runParser()
-		if err != nil {
-			t.Fatalf("failed on input '%v'. %v.", tst.input, err)
-		}
-		if diff := cmp.Diff(tst.want, got, cmpopts.EquateEmpty()); diff != "" {
-			t.Fatalf("failed on input '%v' with diff '%v'", tst.input, diff)
-		}
+	for i, tst := range table {
+		t.Run(fmt.Sprintf("Test %d of %d", i+1, len(table)), func(t *testing.T) {
+			ter := newParser(tst.input)
+			got, err := ter.runParser()
+			if err != nil {
+				t.Fatalf("failed on input '%v'. %v.", tst.input, err)
+			}
+			if diff := cmp.Diff(tst.want, got, cmpopts.EquateEmpty()); diff != "" {
+				t.Fatalf("failed on input '%v' with diff '%v'", tst.input, diff)
+			}
+		})
 	}
 }

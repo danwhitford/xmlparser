@@ -1,7 +1,6 @@
 package tokeniser
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 )
@@ -79,14 +78,16 @@ func (t *Tokeniser) Tokenise() ([]Token, error) {
 				tokens = append(tokens, Token{ProcRB, "?>"})
 				t.curr += 2
 			} else {
-				return tokens, fmt.Errorf("unexpected '?' without closing")
+				tokens = append(tokens, Token{Keyword, "?"})
+				t.curr++
 			}
 		case '/':
 			if t.curr+1 < t.l && t.Input[t.curr+1] == '>' {
 				tokens = append(tokens, Token{SelfRB, "/>"})
 				t.curr += 2
 			} else {
-				return tokens, fmt.Errorf("unexpected '/' without closing")
+				tokens = append(tokens, Token{Keyword, "/"})
+				t.curr++
 			}
 		case '"':
 			token, err := t.getString()

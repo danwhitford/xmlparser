@@ -10,7 +10,7 @@ type Attribute struct {
 }
 
 type Instruction struct {
-	Name string
+	Name       string
 	Attributes []Attribute
 }
 
